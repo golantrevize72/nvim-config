@@ -1,7 +1,15 @@
-tags
-test.sh
-.luarc.json
-nvim
+# Lockfile de plugins: según gestor, mejor versionarlo (ver abajo)
+# lazy-lock.json
 
-spell/
-lazy-lock.json
+# Archivos de sesión / swap / undo
+*.swp
+*.un~
+.netrwhist
+spell/*.add.spl
+
+# Caches
+plugin/packer_compiled.lua
+
+
+# Configuraciones de Finder en MacOS
+.DS_Store

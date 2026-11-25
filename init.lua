@@ -91,7 +91,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.o`
@@ -166,6 +166,16 @@ vim.o.scrolloff = 10
 -- See `:help 'confirm'`
 vim.o.confirm = true
 
+--[[MY options]]
+-- Treesitter-based folding
+vim.opt.foldmethod = 'expr'
+vim.opt.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+vim.opt.foldlevel = 99
+vim.opt.foldenable = true
+
+-- Conceal level set to 2, for increased readability of markdown files
+vim.opt.conceallevel = 2
+
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
 
@@ -205,8 +215,40 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 -- vim.keymap.set("n", "<C-S-j>", "<C-w>J", { desc = "Move window to the lower" })
 -- vim.keymap.set("n", "<C-S-k>", "<C-w>K", { desc = "Move window to the upper" })
 
+-- [[MY Keybindings]]
+-- Scrolling on visual lines instead of logial ones
+vim.keymap.set({ 'n', 'v' }, 'j', "v:count == 0 ? 'gj' : 'j'", { expr = true })
+vim.keymap.set({ 'n', 'v' }, 'k', "v:count == 0 ? 'gk' : 'k'", { expr = true })
+
+-- This next is to follow links at point in markdown files, where ZK is an LSP
+vim.keymap.set('n', 'gd', vim.lsp.buf.definition, { desc = 'Go to definition' })
+
+-- Keybindings for ZK
+vim.keymap.set('n', '<leader>kN', '<cmd>ZkNotes<CR>', { desc = 'ZK new note from list' })
+vim.keymap.set('v', '<leader>kt', '<cmd>ZkNewFromTitleSelection<CR>', { desc = 'ZK new note with title from selection' })
+vim.keymap.set('n', '<leader>kj', '<cmd>ZkGrep<CR>', { desc = 'Live grep in ZK directory' })
+
+-- Moving lines up and down
+vim.keymap.set('n', '§', ':m .-2<CR>==', { silent = true })
+vim.keymap.set('n', '¶', ':m .+1<CR>==', { silent = true })
+
+-- Spell check keybindings
+vim.keymap.set('n', '<leader>c', '[s1z=', { desc = 'Corregir anterior con sugerencia 1' })
+
+-- [[MY commands]]
+-- Open init.lua with just one command
+vim.api.nvim_create_user_command('Config', function()
+  vim.cmd('vsplit ' .. vim.fn.stdpath 'config' .. '/init.lua')
+end, {})
+
+vim.api.nvim_create_user_command('ZkGrep', function()
+  require('telescope.builtin').live_grep {
+    cwd = vim.fn.expand '~/Documents/Pk',
+  }
+end, {})
+
 -- [[ Basic Autocommands ]]
---  See `:help lua-guide-autocommands`
+-- See `:help lua-guide-autocommands`
 
 -- Highlight when yanking (copying) text
 --  Try it with `yap` in normal mode
@@ -216,6 +258,35 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
   callback = function()
     vim.hl.on_yank()
+  end,
+})
+
+-- Visual line wrap for markdown files
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'markdown',
+  callback = function()
+    vim.opt_local.wrap = true
+    vim.opt_local.linebreak = true -- Break at words
+    vim.opt_local.breakindent = true -- Keep indentation
+  end,
+})
+
+-- [[ MY Autocommands ]]
+vim.api.nvim_create_autocmd('User', {
+  pattern = 'TelescopePreviewerLoaded',
+  callback = function()
+    vim.wo.wrap = true
+    vim.wo.linebreak = true
+  end,
+})
+
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = { 'markdown', 'text', 'org' },
+  callback = function()
+    vim.opt_local.spell = true
+    vim.opt_local.spelllang = { 'es', 'en' }
+    --    vim.opt_local.dictionary:append vim.fn.
+    --    vim.opt_local.complete = '.,w,b,k,kspell'
   end,
 })
 
@@ -782,6 +853,7 @@ require('lazy').setup({
     event = 'VimEnter',
     version = '1.*',
     dependencies = {
+      { 'saghen/blink.compat' },
       -- Snippet Engine
       {
         'L3MON4D3/LuaSnip',
@@ -809,6 +881,7 @@ require('lazy').setup({
         opts = {},
       },
       'folke/lazydev.nvim',
+      'Kaiser-Yang/blink-cmp-dictionary',
     },
     --- @module 'blink.cmp'
     --- @type blink.cmp.Config
@@ -835,7 +908,7 @@ require('lazy').setup({
         -- <c-k>: Toggle signature help
         --
         -- See :h blink-cmp-config-keymap for defining your own keymap
-        preset = 'default',
+        preset = 'super-tab',
 
         -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
         --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
@@ -854,9 +927,26 @@ require('lazy').setup({
       },
 
       sources = {
-        default = { 'lsp', 'path', 'snippets', 'lazydev' },
+        default = { 'lsp', 'path', 'snippets', 'lazydev', 'buffer' },
         providers = {
           lazydev = { module = 'lazydev.integrations.blink', score_offset = 100 },
+          buffer = {
+            opts = {
+              get_bufnrs = function()
+                return vim.tbl_filter(function(buf)
+                  return vim.bo[buf].buftype == '' and vim.bo[buf].filetype == 'markdown'
+                end, vim.api.nvim_list_bufs())
+              end,
+            },
+          },
+          dictionary = {
+            module = 'blik_cmp_dictionary',
+            name = 'Dict',
+            min_keyword_length = 4,
+            opts = {
+              dictionary_files = { vim.fn.stdpath 'config' .. '/dict/en.txt', vim.fn.stdpath 'config' .. '/dict/es.txt' },
+            },
+          },
         },
       },
 
@@ -984,7 +1074,7 @@ require('lazy').setup({
   --    This is the easiest way to modularize your config.
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
-  -- { import = 'custom.plugins' },
+  { import = 'custom.plugins' },
   --
   -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
   -- Or use telescope!
