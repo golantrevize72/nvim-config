@@ -926,10 +926,10 @@ require('lazy').setup({
       },
 
       sources = {
-        default = { 'lsp', 'path', 'snippets', 'lazydev', 'buffer', 'dictionary' },
-        --   per_filetype = {
-        --    markdown = { 'dictionary_es', 'dictionary_en', 'personal', 'buffer', 'path' },
-        -- },
+        default = { 'lsp', 'path', 'snippets', 'lazydev' },
+        per_filetype = {
+          markdown = { 'dictionary' },
+        },
         providers = {
           lazydev = { module = 'lazydev.integrations.blink', score_offset = 100 },
           buffer = {
@@ -942,18 +942,10 @@ require('lazy').setup({
               end,
             },
           },
-          personal = {
-            min_keyword_length = 3,
-            module = 'blink-cmp-dictionary',
-            name = 'personal',
-            enabled = true,
-            score_offset = 20,
-            opts = {
-              dictionary_files = {
-                vim.fn.stdpath 'data' .. '/site/spell/es.utf-8.add',
-              },
-            },
-          },
+          -- Although I tried to split the 3 source files into 3 different dictionaries,
+          -- this is something that, apparently doesn't work. It's like one is overlapping the other
+          -- and you only get suggestions from one of them. In this way, with all dictionary
+          -- files within a single list, it works fine.
           dictionary = {
             min_keyword_length = 3,
             module = 'blink-cmp-dictionary',
@@ -964,6 +956,7 @@ require('lazy').setup({
               dictionary_files = {
                 vim.fn.expand '~/.config/nvim/dict/es.txt',
                 vim.fn.expand '~/.config/nvim/dict/en.txt',
+                vim.fn.expand '~/.local/share/nvim/site/spell/es.utf-8.add',
               },
             },
           },
