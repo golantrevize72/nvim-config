@@ -853,7 +853,6 @@ require('lazy').setup({
     event = 'VimEnter',
     version = '1.*',
     dependencies = {
-      { 'saghen/blink.compat' },
       -- Snippet Engine
       {
         'L3MON4D3/LuaSnip',
@@ -927,10 +926,14 @@ require('lazy').setup({
       },
 
       sources = {
-        default = { 'lsp', 'path', 'snippets', 'lazydev', 'buffer' },
+        default = { 'lsp', 'path', 'snippets', 'lazydev', 'buffer', 'dictionary' },
+        --   per_filetype = {
+        --    markdown = { 'dictionary_es', 'dictionary_en', 'personal', 'buffer', 'path' },
+        -- },
         providers = {
           lazydev = { module = 'lazydev.integrations.blink', score_offset = 100 },
           buffer = {
+            min_keyword_length = 4,
             opts = {
               get_bufnrs = function()
                 return vim.tbl_filter(function(buf)
@@ -939,12 +942,29 @@ require('lazy').setup({
               end,
             },
           },
-          dictionary = {
-            module = 'blik_cmp_dictionary',
-            name = 'Dict',
-            min_keyword_length = 4,
+          personal = {
+            min_keyword_length = 3,
+            module = 'blink-cmp-dictionary',
+            name = 'personal',
+            enabled = true,
+            score_offset = 20,
             opts = {
-              dictionary_files = { vim.fn.stdpath 'config' .. '/dict/en.txt', vim.fn.stdpath 'config' .. '/dict/es.txt' },
+              dictionary_files = {
+                vim.fn.stdpath 'data' .. '/site/spell/es.utf-8.add',
+              },
+            },
+          },
+          dictionary = {
+            min_keyword_length = 3,
+            module = 'blink-cmp-dictionary',
+            name = 'Dict',
+            enabled = true,
+            score_offset = 10,
+            opts = {
+              dictionary_files = {
+                vim.fn.expand '~/.config/nvim/dict/es.txt',
+                vim.fn.expand '~/.config/nvim/dict/en.txt',
+              },
             },
           },
         },
@@ -959,7 +979,7 @@ require('lazy').setup({
       -- the rust implementation via `'prefer_rust_with_warning'`
       --
       -- See :h blink-cmp-config-fuzzy for more information
-      fuzzy = { implementation = 'lua' },
+      fuzzy = { implementation = 'prefer_rust_with_warning' },
 
       -- Shows a signature help window while you type arguments for a function
       signature = { enabled = true },
