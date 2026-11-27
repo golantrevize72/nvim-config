@@ -176,6 +176,13 @@ vim.opt.foldenable = true
 -- Conceal level set to 2, for increased readability of markdown files
 vim.opt.conceallevel = 2
 
+-- Options to replace tab indents with spaces
+vim.opt.expandtab = true -- Force spaces
+vim.opt.tabstop = 2 -- 2 space indents
+vim.opt.shiftwidth = 2 -- Size of an indent
+vim.opt.softtabstop = 2 -- Number of spaces that <tab> counts for while editing
+vim.opt.smartindent = true
+
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
 
@@ -247,6 +254,12 @@ vim.api.nvim_create_user_command('ZkGrep', function()
   }
 end, {})
 
+vim.api.nvim_create_user_command('DebugNodeTree', function()
+  if require('utils.markdown').is_in_yaml_header() then
+    print 'Inside header'
+  end
+end, {})
+--
 -- [[ Basic Autocommands ]]
 -- See `:help lua-guide-autocommands`
 
@@ -928,12 +941,13 @@ require('lazy').setup({
       sources = {
         default = { 'lsp', 'path', 'snippets', 'lazydev' },
         per_filetype = {
-          markdown = { 'dictionary' },
+          markdown = { 'dictionary', 'lsp', 'buffer' },
         },
         providers = {
           lazydev = { module = 'lazydev.integrations.blink', score_offset = 100 },
           buffer = {
             min_keyword_length = 4,
+            score_offset = 75,
             opts = {
               get_bufnrs = function()
                 return vim.tbl_filter(function(buf)
@@ -950,8 +964,10 @@ require('lazy').setup({
             min_keyword_length = 3,
             module = 'blink-cmp-dictionary',
             name = 'Dict',
-            enabled = true,
-            score_offset = 10,
+            enabled = function()
+              return not require('utils.markdown').is_in_yaml_header()
+            end,
+            score_offset = 0,
             opts = {
               dictionary_files = {
                 vim.fn.expand '~/.config/nvim/dict/es.txt',
